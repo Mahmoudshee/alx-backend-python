@@ -1,75 +1,34 @@
 #!/usr/bin/env python3
-"""Generic utilities for github org client.
-"""
+""" Utility functions for the tasks """
+
 import requests
 from functools import wraps
-from typing import (
-    Mapping,
-    Sequence,
-    Any,
-    Dict,
-    Callable,
-)
 
-__all__ = [
-    "access_nested_map",
-    "get_json",
-    "memoize",
-]
-
-
-def access_nested_map(nested_map: Mapping, path: Sequence) -> Any:
-    """Access nested map with key path.
-    Parameters
-    ----------
-    nested_map: Mapping
-        A nested map
-    path: Sequence
-        a sequence of key representing a path to the value
-    Example
-    -------
-    >>> nested_map = {"a": {"b": {"c": 1}}}
-    >>> access_nested_map(nested_map, ["a", "b", "c"])
-    1
-    """
+def access_nested_map(nested_map, path):
+    """ Access nested items in a dictionary """
     for key in path:
-        if not isinstance(nested_map, Mapping):
-            raise KeyError(key)
-        nested_map = nested_map[key]
-
+        if key in nested_map:
+            nested_map = nested_map[key]
+        else:
+            return None
     return nested_map
 
-
-def get_json(url: str) -> Dict:
-    """Get JSON from remote URL.
-    """
+def get_json(url):
+    """ Send a GET request and parse JSON response """
     response = requests.get(url)
-    return response.json()
+    if response.status_code == 200:
+        return response.json()
+    return None
 
+def memoize(func):
+    """ Memoize decorator to cache function results """
+    cache = {}
 
-def memoize(fn: Callable) -> Callable:
-    """Decorator to memoize a method.
-    Example
-    -------
-    class MyClass:
-        @memoize
-        def a_method(self):
-            print("a_method called")
-            return 42
-    >>> my_object = MyClass()
-    >>> my_object.a_method
-    a_method called
-    42
-    >>> my_object.a_method
-    42
-    """
-    attr_name = "_{}".format(fn.__name__)
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        key = args + tuple(sorted(kwargs.items()))
+        if key not in cache:
+            cache[key] = func(*args, **kwargs)
+        return cache[key]
 
-    @wraps(fn)
-    def memoized(self):
-        """"memoized wraps"""
-        if not hasattr(self, attr_name):
-            setattr(self, attr_name, fn(self))
-        return getattr(self, attr_name)
-
-    return property(memoized)
+    return wrapper
